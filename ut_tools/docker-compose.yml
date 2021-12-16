@@ -1,0 +1,68 @@
+###################################################################################
+# dynamodb    https://developers.freee.co.jp/entry/dynamodb-local
+#             https://qiita.com/okashoi/items/f1c757279574d37b812e
+# dynamodb-admin  https://www.scriptlife.jp/contents/programming/2018/10/21/aws-docker-dynamodb-local/
+#             https://qiita.com/mk-tool/items/dd3f97611dd8b4723929
+#             https://qiita.com/tos-miyake/items/c96acad84551650f34aa
+# minio       https://qiita.com/kai_kou/items/9fe06d4d24928d9efa2a
+#             https://toripiyo.hatenablog.com/entry/2018/08/24/170834
+# alpine-sqs  https://github.com/roribio/alpine-sqs
+###################################################################################
+version: '3'
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data
+    ports:
+      - 8000:8000
+    command:
+      -jar DynamoDBLocal.jar
+    networks:
+      dynamodb_net:
+        ipv4_address: 172.30.0.2
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    depends_on:
+      - dynamodb-local
+    ports:
+      - 8001:8001
+    environment:
+      DYNAMO_ENDPOINT: http://172.30.0.2:8000
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    networks:
+      dynamodb_net:
+        ipv4_address: 172.30.0.3
+  minio:
+    image: "minio/minio"
+    ports:
+      - 9000:9000
+    volumes:
+      - minio_data:/data
+    command: server /data
+    environment:
+      MINIO_ACCESS_KEY: hogehoge
+      MINIO_SECRET_KEY: fugafuga
+    networks:
+      dynamodb_net:
+        ipv4_address: 172.30.0.4
+  # alpine-sqs:
+  #   image: roribio16/alpine-sqs:latest
+  #   container_name: alpine-sqs
+  #   ports:
+  #     - "9324:9324"
+  #     - "9325:9325"
+  #   stdin_open: true
+  #   tty: true
+volumes:
+  dynamodb_data:
+  minio_data:
+networks:
+  dynamodb_net:
+    ipam:
+     driver: default
+     config:
+       - subnet: 172.30.0.0/24
